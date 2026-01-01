@@ -1,5 +1,13 @@
-opencv-python
-mediapipe
-numpy
-piper-tts
-pyaudio
+# Core Dependencies
+opencv-python>=4.5.0
+mediapipe>=0.10.0
+numpy>=1.19.0,<2.0.0  # NumPy 1.x required for TensorFlow/MediaPipe compatibility
+
+# Machine Learning
+tensorflow>=2.4.0,<2.16.0  # For training and full recognition
+scikit-learn>=0.24.0  # Model training utilities
+h5py>=3.1.0  # Model serialization
+
+# Optional: Voice Feedback (for asl_recognize_tf.py only)
+piper-tts>=1.2.0  # Text-to-speech
+# Note: Piper TTS not required for asl_recognize_lite.py (edge version)
