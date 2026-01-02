@@ -16,7 +16,7 @@ Real-time American Sign Language (ASL) fingerspelling letter recognition system 
   - 24 static letters (A-I, K-Y): TensorFlow MLP neural network
   - 2 motion letters (J, Z): Rule-based trajectory detection
 - **Two Recognition Modes**:
-  - **Full Model** (`asl_recognize_tf.py`): TensorFlow + Piper TTS voice feedback
+  - **Full Model (PC)** (`asl_recognize_pc.py`): TensorFlow + Piper TTS voice feedback
   - **Jetson TensorRT** (`asl_recognize_jetson.py`): TensorRT-ONNX, GPU-accelerated inference on Jetson
 - **MediaPipe Hand Tracking**: 21-point hand landmark detection (42 features)
 - **Real-Time Processing**: Optimized for 30 FPS on Jetson Nano
@@ -95,13 +95,13 @@ python3 -c "import tensorflow as tf; print('GPU Available:', tf.config.list_phys
 ### 6. Collect Training Data
 ```bash
 # Collect 100 samples per static letter (24 letters)
-python asl_data_collector_tf.py --samples 100
+python asl_data_collector_pc.py --samples 100
 ```
 
 ### 7. Train Model
 ```bash
 # Train MLP model for static letters
-python asl_trainer_mediapipe.py
+python asl_trainer.py
 ```
 
 ### 8. Convert to ONNX (For TensorRT on Jetson)
@@ -123,10 +123,10 @@ mkdir -p voices
 ### Real-Time Recognition (Full Model with Voice)
 ```bash
 # With voice feedback
-python asl_recognize_tf.py --voice voices/en_US-amy-medium.onnx
+python asl_recognize_pc.py --voice voices/en_US-amy-medium.onnx
 
 # Without voice
-python asl_recognize_tf.py
+python asl_recognize_pc.py
 ```
 
 ### Jetson-Optimized Recognition (TensorRT-ONNX, GPU)
@@ -143,17 +143,16 @@ python asl_recognize_jetson.py
 
 ### Performance on Jetson Nano
 - **TensorRT-ONNX version** (`asl_recognize_jetson.py`): GPU-accelerated, typically highest FPS on Jetson
-- **Full TensorFlow** (`asl_recognize_tf.py`): ~15–25 FPS (depending on resolution and lighting)
+- **Full TensorFlow (PC)** (`asl_recognize_pc.py`): ~15–25 FPS (depending on resolution and lighting)
 
 ## 📁 Project Structure
 
 ```
 edgeAI/
-├── asl_recognize_tf.py         # Full TensorFlow recognition (with TTS)
+├── asl_recognize_pc.py         # Full TensorFlow recognition (with TTS, PC)
 ├── asl_recognize_jetson.py     # TensorRT-ONNX Jetson-optimized recognition
-├── asl_data_collector_tf.py    # Data collection tool (24 static letters)
-├── asl_trainer_mediapipe.py    # Model training pipeline (MLP)
-├── convertToTFlite.py          # H5 → TFLite model converter
+├── asl_data_collector_pc.py    # Data collection tool (24 static letters, PC)
+├── asl_trainer.py              # Model training pipeline (MLP)
 ├── requirements.txt            # Python dependencies
 ├── README.md                   # This file
 ├── asl_data/                   # Models and datasets
@@ -205,10 +204,10 @@ The `convert_h5_to_onnx.py` script:
 
 ## 🎓 Training Your Own Model
 
-1. **Collect Data**: Use `asl_data_collector_tf.py` to gather samples
-2. **Train**: Run `asl_trainer_mediapipe.py` (creates `.h5` and `.pkl` files)
-3. **Convert**: Use `convertToTFlite.py` for edge deployment
-4. **Test**: Verify with `asl_recognize_lite.py`
+1. **Collect Data**: Use `asl_data_collector_pc.py` to gather samples
+2. **Train**: Run `asl_trainer.py` (creates `.h5` and `.pkl` files)
+3. **Convert (Jetson)**: Use `convert_h5_to_onnx.py` for TensorRT deployment
+4. **Test**: Verify with `asl_recognize_pc.py` on PC or `asl_recognize_jetson.py` on Jetson
 
 ## ⚡ Performance Optimization for Jetson Nano
 
