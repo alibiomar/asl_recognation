@@ -1,6 +1,6 @@
 # ASL Fingerspelling Recognition for NVIDIA Jetson Nano
 
-Real-time American Sign Language (ASL) fingerspelling letter recognition system optimized for **NVIDIA Jetson Nano** edge devices. Recognizes all 26 letters using MediaPipe hand tracking, TensorFlow/TFLite models, and rule-based motion detection.
+Real-time American Sign Language (ASL) fingerspelling letter recognition system optimized for **NVIDIA Jetson Nano** edge devices. Recognizes all 26 letters using MediaPipe hand tracking, TensorFlow/TensorRT-ONNX models, and rule-based motion detection.
 
 ## 🎯 Target Platform
 
@@ -15,9 +15,9 @@ Real-time American Sign Language (ASL) fingerspelling letter recognition system 
 - **All 26 ASL Letters**: Complete fingerspelling alphabet recognition
   - 24 static letters (A-I, K-Y): TensorFlow MLP neural network
   - 2 motion letters (J, Z): Rule-based trajectory detection
-- **Dual Recognition Modes**:
+- **Two Recognition Modes**:
   - **Full Model** (`asl_recognize_tf.py`): TensorFlow + Piper TTS voice feedback
-  - **Edge Optimized** (`asl_recognize_lite.py`): TFLite for faster inference on Jetson Nano
+  - **Jetson TensorRT** (`asl_recognize_jetson.py`): TensorRT-ONNX, GPU-accelerated inference on Jetson
 - **MediaPipe Hand Tracking**: 21-point hand landmark detection (42 features)
 - **Real-Time Processing**: Optimized for 30 FPS on Jetson Nano
 - **Word Building**: Interactive letter-by-letter word construction
@@ -47,6 +47,8 @@ numpy>=1.19.0,<2.0.0       # NumPy 1.x (TensorFlow compatibility)
 scikit-learn>=0.24.0       # Model training utilities
 h5py>=3.1.0                # Model serialization
 piper-tts                  # Voice synthesis (optional)
+pycuda                     # CUDA buffers for TensorRT runtime (Jetson)
+# TensorRT Python bindings are installed via JetPack (nvidia-tensorrt)
 ```
 
 ## 🚀 Setup for Jetson Nano
@@ -102,10 +104,10 @@ python asl_data_collector_tf.py --samples 100
 python asl_trainer_mediapipe.py
 ```
 
-### 8. Convert to TFLite (For Edge Optimization)
+### 8. Convert to ONNX (For TensorRT on Jetson)
 ```bash
-# Convert H5 model to TFLite with quantization
-python convertToTFlite.py --test
+# Convert H5 model to ONNX for TensorRT
+python convert_h5_to_onnx.py
 ```
 
 ### 9. (Optional) Download Piper TTS Voice Model
@@ -127,10 +129,10 @@ python asl_recognize_tf.py --voice voices/en_US-amy-medium.onnx
 python asl_recognize_tf.py
 ```
 
-### Edge-Optimized Recognition (TFLite - Recommended for Jetson Nano)
+### Jetson-Optimized Recognition (TensorRT-ONNX, GPU)
 ```bash
-# Faster inference, lower memory usage
-python asl_recognize_lite.py
+# Highest performance on Jetson using TensorRT-ONNX
+python asl_recognize_jetson.py
 ```
 
 ### Controls
@@ -140,16 +142,15 @@ python asl_recognize_lite.py
 - **Q**: Quit application
 
 ### Performance on Jetson Nano
-- **TFLite version**: ~30-45 FPS (recommended)
-- **Full TensorFlow**: ~15-25 FPS
-- **Memory usage**: ~800MB (TFLite) vs ~1.2GB (full TF)
+- **TensorRT-ONNX version** (`asl_recognize_jetson.py`): GPU-accelerated, typically highest FPS on Jetson
+- **Full TensorFlow** (`asl_recognize_tf.py`): ~15–25 FPS (depending on resolution and lighting)
 
 ## 📁 Project Structure
 
 ```
 edgeAI/
 ├── asl_recognize_tf.py         # Full TensorFlow recognition (with TTS)
-├── asl_recognize_lite.py       # TFLite edge-optimized recognition
+├── asl_recognize_jetson.py     # TensorRT-ONNX Jetson-optimized recognition
 ├── asl_data_collector_tf.py    # Data collection tool (24 static letters)
 ├── asl_trainer_mediapipe.py    # Model training pipeline (MLP)
 ├── convertToTFlite.py          # H5 → TFLite model converter
@@ -158,8 +159,8 @@ edgeAI/
 ├── asl_data/                   # Models and datasets
 │   ├── asl_static_dataset.csv  # Collected training data
 │   ├── asl_static_model.h5     # Trained Keras model
-│   ├── asl_static_model.tflite # TFLite converted model
-│   └── asl_static_metadata.pkl # Model metadata (normalization params)
+│   ├── asl_static_model.onnx   # ONNX model for TensorRT (Jetson)
+│   └── asl_static_metadata.pkl # Model metadata (normalization params, label encoder)
 ├── voices/                     # Optional TTS voice models
 │   ├── en_US-amy-medium.onnx
 │   └── en_US-amy-medium.onnx.json
@@ -188,11 +189,11 @@ edgeAI/
 
 ## 🔧 Model Conversion Details
 
-The `convertToTFlite.py` script:
-- Converts Keras `.h5` models to `.tflite` format
-- Applies dynamic range quantization (50-80% size reduction)
-- Preserves model accuracy (~<1% drop)
-- Optimizes for ARM NEON and GPU delegate on Jetson
+The `convert_h5_to_onnx.py` script:
+- Converts the same Keras `.h5` model to an ONNX MLP
+- Preserves the 42-feature input and class ordering
+- Produces `asl_static_model.onnx` used by `asl_recognize_jetson.py`
+- Enables TensorRT engine building for maximum performance on Jetson
 
 ## 📊 Data Collection Tips
 
@@ -228,7 +229,7 @@ cat /sys/devices/virtual/thermal/thermal_zone*/temp
 ```
 
 ### Reduce Memory Usage
-- Use TFLite version (`asl_recognize_lite.py`)
+- Prefer the TensorRT-ONNX path (`asl_recognize_jetson.py`) for best performance/efficiency
 - Close unnecessary applications
 - Disable GUI for headless operation
 
@@ -257,7 +258,7 @@ pip install "numpy<2.0.0"
 ```
 
 ### Low FPS
-- Switch to TFLite version (`asl_recognize_lite.py`)
+- Use TensorRT-ONNX (`asl_recognize_jetson.py`) instead of pure TensorFlow
 - Enable max performance mode (`sudo nvpmodel -m 0`)
 - Reduce camera resolution
 - Close background applications
@@ -266,6 +267,7 @@ pip install "numpy<2.0.0"
 
 - **MediaPipe**: https://mediapipe.dev/
 - **TensorFlow for Jetson**: https://docs.nvidia.com/deeplearning/frameworks/install-tf-jetson-platform/
+- **TensorRT**: https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html
 - **Piper TTS**: https://github.com/rhasspy/piper
 - **Jetson Nano Guide**: https://developer.nvidia.com/embedded/learn/get-started-jetson-nano-devkit
 
